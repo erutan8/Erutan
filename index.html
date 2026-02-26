@@ -1,31 +1,447 @@
-const display = document.getElementById("display");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scientific calculator • pure css + js</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            margin: 0;
+            user-select: none;
+        }
 
-function append(value) {
-  display.value += value;
-}
+        body {
+            background: linear-gradient(145deg, #2b3d4f 0%, #1d2c38 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 16px;
+        }
 
-function clearDisplay() {
-  display.value = "";
-}
+        .calculator {
+            background: #22303c;
+            border-radius: 32px;
+            padding: 24px 20px 28px 20px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6), inset 2px 2px 8px rgba(255,255,255,0.08), inset -4px -4px 12px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 460px;
+            transition: 0.2s;
+        }
 
-function deleteLast() {
-  display.value = display.value.slice(0, -1);
-}
+        .display {
+            background: #1b262e;
+            border-radius: 24px;
+            padding: 14px 20px 10px 20px;
+            margin-bottom: 20px;
+            box-shadow: inset 0px 4px 10px rgba(0,0,0,0.6), inset 0px -2px 4px rgba(255,255,255,0.05);
+            text-align: right;
+            word-wrap: break-word;
+            word-break: break-all;
+            min-height: 110px;
+        }
 
-function calculate() {
-  try {
-    let expression = display.value;
+        .history {
+            font-size: 1rem;
+            color: #80b4d0;
+            letter-spacing: 0.5px;
+            min-height: 28px;
+            margin-bottom: 6px;
+            font-weight: 300;
+            opacity: 0.9;
+        }
 
-    expression = expression.replace(/sin\(/g, "Math.sin(");
-    expression = expression.replace(/cos\(/g, "Math.cos(");
-    expression = expression.replace(/tan\(/g, "Math.tan(");
-    expression = expression.replace(/log\(/g, "Math.log10(");
-    expression = expression.replace(/ln\(/g, "Math.log(");
-    expression = expression.replace(/sqrt\(/g, "Math.sqrt(");
-    expression = expression.replace(/(\d+)\^(\d+)/g, "Math.pow($1,$2)");
+        .current-input {
+            font-size: 2.6rem;
+            font-weight: 500;
+            line-height: 1.2;
+            color: #e6f0f9;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
 
-    display.value = eval(expression);
-  } catch {
-    display.value = "Error";
-  }
-}
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+        }
+
+        /* button base style */
+        .btn {
+            background: #2e3d4a;
+            border: none;
+            border-radius: 28px;
+            padding: 16px 6px;
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #d4e6f2;
+            box-shadow: 0 6px 0 #15222b, 0 6px 10px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: all 0.07s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            will-change: transform;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #15222b, 0 3px 8px rgba(0,0,0,0.5);
+        }
+
+        /* function & operator colors */
+        .btn-fn {
+            background: #3a4d5c;
+            color: #c0e0ff;
+            font-size: 1.2rem;
+        }
+
+        .btn-operator {
+            background: #3f5668;
+            color: #ffd98c;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .btn-equals {
+            background: #d48c4e;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.8rem;
+            box-shadow: 0 6px 0 #8b4f27, 0 6px 12px rgba(0,0,0,0.5);
+        }
+
+        .btn-equals:active {
+            background: #c07a3a;
+        }
+
+        .btn-clear {
+            background: #5d4c4a;
+            color: #ffc7b0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .btn[data-value="π"], .btn[data-value="e"] {
+            font-weight: 600;
+            background: #2e4b55;
+        }
+
+        /* span for smaller text on some buttons */
+        .small-text {
+            font-size: 1rem;
+            margin-left: 2px;
+        }
+
+        .superscript {
+            font-size: 0.9rem;
+            vertical-align: super;
+            line-height: 0;
+        }
+
+        /* wide buttons (optional, but we keep consistent) */
+        .btn-zero {
+            grid-column: span 2;
+        }
+
+        /* responsive fine-tuning */
+        @media (max-width: 450px) {
+            .button-grid {
+                gap: 7px;
+            }
+            .btn {
+                padding: 14px 2px;
+                font-size: 1.1rem;
+            }
+            .current-input {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <!-- display area -->
+        <div class="display">
+            <div class="history" id="historyDisplay"></div>
+            <div class="current-input" id="currentDisplay">0</div>
+        </div>
+
+        <!-- button grid : 6 columns for scientific layout -->
+        <div class="button-grid" id="calculator-buttons">
+            <!-- row 1: scientific constants & clear -->
+            <button class="btn btn-fn" data-value="π">π</button>
+            <button class="btn btn-fn" data-value="e">e</button>
+            <button class="btn btn-fn" data-value="C">C</button>
+            <button class="btn btn-fn" data-value="⌫">⌫</button>
+            <button class="btn btn-clear" data-value="AC">AC</button>
+            <button class="btn btn-operator" data-value="/">÷</button>
+            
+            <!-- row 2: power, sqrt, log, ln, 7 8 9 * -->
+            <button class="btn btn-fn" data-value="^">x<sup class="superscript">y</sup></button>
+            <button class="btn btn-fn" data-value="√">√</button>
+            <button class="btn btn-fn" data-value="log">log</button>
+            <button class="btn btn-fn" data-value="ln">ln</button>
+            <button class="btn" data-value="7">7</button>
+            <button class="btn" data-value="8">8</button>
+            
+            <!-- row 3: ( ) ! 9, but also 9 already used, adjust: keep factorial, 9 is previous, but we shift: -->
+            <!-- better: use consistent layout: row3: sin cos tan ( 9 4 5 6 * but we need columns -->
+            <!-- I'll reorder logically: third row: sin, cos, tan, (, 4, 5, 6, ×? no: 6 columns, must be 6 per row. Let's design row by row: -->
+            <!-- row 2 we placed 6 buttons: ^ √ log ln 7 8 . next row: sin cos tan ( ) 9 ? that's 6, yes: sin cos tan ( ) 9  + next row: but 9 already, we can use: -->
+            <!-- I'll write full grid clearly: -->
+            
+            <!-- row 3 (scientific + parentheses) -->
+            <button class="btn btn-fn" data-value="sin">sin</button>
+            <button class="btn btn-fn" data-value="cos">cos</button>
+            <button class="btn btn-fn" data-value="tan">tan</button>
+            <button class="btn btn-fn" data-value="(">(</button>
+            <button class="btn btn-fn" data-value=")">)</button>
+            <button class="btn" data-value="9">9</button>
+            
+            <!-- row 4: asin acos atan ! 5 6 * -->
+            <button class="btn btn-fn" data-value="asin">sin⁻¹</button>
+            <button class="btn btn-fn" data-value="acos">cos⁻¹</button>
+            <button class="btn btn-fn" data-value="atan">tan⁻¹</button>
+            <button class="btn btn-fn" data-value="!">n!</button>
+            <button class="btn" data-value="5">5</button>
+            <button class="btn" data-value="6">6</button>
+            
+            <!-- row 5: 10^x, e^x, mod, 2 3 4 - -->
+            <button class="btn btn-fn" data-value="10^">10<sup class="superscript">x</sup></button>
+            <button class="btn btn-fn" data-value="exp">e<sup class="superscript">x</sup></button>
+            <button class="btn btn-fn" data-value="mod">mod</button>
+            <button class="btn" data-value="2">2</button>
+            <button class="btn" data-value="3">3</button>
+            <button class="btn" data-value="4">4</button>
+            
+            <!-- row 6: ., 0, =, +, but we also need × and maybe other, use columns:  . 0 = +  -->
+            <!-- row 6: × , ., 0, =, +, but need 6 columns. add extra helper: 1 and minus? but we have minus missing. include minus here: -->
+            <button class="btn btn-operator" data-value="*">×</button>
+            <button class="btn" data-value=".">.</button>
+            <button class="btn" data-value="0">0</button>
+            <button class="btn btn-equals" data-value="=">=</button>
+            <button class="btn btn-operator" data-value="+">+</button>
+            <button class="btn btn-operator" data-value="-">−</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // --- state ---
+            let currentInput = '0';           // what's displayed (main)
+            let previousExpression = '';       // history (previous full expression)
+            let lastResult = null;              // optional, but we keep for ans
+            const historyEl = document.getElementById('historyDisplay');
+            const currentEl = document.getElementById('currentDisplay');
+            const buttons = document.querySelectorAll('.btn');
+
+            // update both display fields
+            function updateDisplay() {
+                currentEl.innerText = currentInput === '' ? '0' : currentInput;
+                historyEl.innerText = previousExpression;
+            }
+
+            // helper: check if value is an operator (for formatting)
+            function isOperator(token) {
+                return ['+', '-', '*', '/', 'mod', '^', '√'].includes(token);
+            }
+
+            // factorial function (safe for non - negatives)
+            function factorial(n) {
+                if (n === 0 || n === 1) return 1;
+                let result = 1;
+                for (let i = 2; i <= n; i++) result *= i;
+                return result;
+            }
+
+            // main evaluation (scientific)
+            function evaluateExpression(expr) {
+                // replace constants, functions, operators with js syntax
+                let processed = expr
+                    .replace(/π/g, 'Math.PI')
+                    .replace(/e(?!xp|\\b)/g, 'Math.E')          // e constant, not "exp"
+                    .replace(/ln\(/g, 'Math.log(')              // natural log
+                    .replace(/log\(/g, 'Math.log10(')           // log10
+                    .replace(/sin⁻¹\(/g, 'Math.asin(')          // asin
+                    .replace(/cos⁻¹\(/g, 'Math.acos(')          // acos
+                    .replace(/tan⁻¹\(/g, 'Math.atan(')          // atan
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(')
+                    .replace(/√\(/g, 'Math.sqrt(')              // sqrt(
+                    .replace(/10\^\(/g, 'Math.pow(10,')         // 10^(x) handled later but as function
+                    .replace(/e\^\(/g, 'Math.exp(')             // e^(x)
+                    .replace(/\^/g, '**')                       // power operator
+                    .replace(/mod/g, '%');                      // modulo
+
+                // special handling for factorial "!" : replace e.g. 5! -> factorial(5)
+                // only simple number before !, also maybe parentheses )! we handle more robust:
+                processed = processed.replace(/(\d+|\))\!/g, (match, p1) => {
+                    return `factorial(${p1})`;
+                });
+
+                // additional: handle 10^( and standalone, but we replaced 10^ with Math.pow(10,)
+                // e^( already Math.exp
+
+                // protect against double operators or empty
+                try {
+                    // eslint-disable-next-line no-new-func
+                    const func = new Function('factorial', `return (${processed})` );
+                    const result = func(factorial);
+                    return (typeof result === 'number' && isFinite(result)) ? result : 'Error';
+                } catch (e) {
+                    return 'Error';
+                }
+            }
+
+            // main button handler
+            function handleButton(value) {
+                // special keys first
+                if (value === 'AC') {
+                    currentInput = '0';
+                    previousExpression = '';
+                    lastResult = null;
+                    updateDisplay();
+                    return;
+                }
+                if (value === 'C') {
+                    currentInput = '0';
+                    updateDisplay();
+                    return;
+                }
+                if (value === '⌫') {
+                    if (currentInput.length > 1) {
+                        currentInput = currentInput.slice(0, -1);
+                    } else {
+                        currentInput = '0';
+                    }
+                    updateDisplay();
+                    return;
+                }
+                if (value === '=') {
+                    if (currentInput === 'Error' || currentInput === '') {
+                        currentInput = '0';
+                        updateDisplay();
+                        return;
+                    }
+                    // try to evaluate currentInput, store history
+                    let exprToEval = currentInput;
+                    const result = evaluateExpression(exprToEval);
+                    if (result === 'Error') {
+                        previousExpression = exprToEval + ' =';
+                        currentInput = 'Error';
+                    } else {
+                        previousExpression = exprToEval + ' =';
+                        currentInput = String(result);
+                        lastResult = result;
+                    }
+                    updateDisplay();
+                    return;
+                }
+
+                // if we get an error displayed, reset on next data entry
+                if (currentInput === 'Error') {
+                    currentInput = '';
+                }
+
+                // constants / functions that append as '(' for convenience
+                const functionButtons = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'ln', 'log', '√'];
+                // but asin etc are mapped to sin⁻¹ etc, but data-value is asin, acos, atan — correct.
+
+                // handle based on value
+                if (value === 'π') {
+                    appendToInput('π');
+                } else if (value === 'e') {
+                    appendToInput('e');
+                } else if (functionButtons.includes(value)) {
+                    // append function with '('
+                    if (value === 'asin') appendToInput('sin⁻¹(');
+                    else if (value === 'acos') appendToInput('cos⁻¹(');
+                    else if (value === 'atan') appendToInput('tan⁻¹(');
+                    else if (value === '√') appendToInput('√(');
+                    else appendToInput(value + '(');   // sin( , cos( , tan( , ln( , log(
+                } else if (value === '10^') {
+                    appendToInput('10^(');
+                } else if (value === 'exp') {
+                    appendToInput('e^(');
+                } else if (value === '!') {
+                    // append factorial symbol directly after last number or parenthesis
+                    // better to insert '!' after current token
+                    currentInput += '!';
+                } else if (value === '(' || value === ')') {
+                    appendToInput(value);
+                } else if (['+', '-', '*', '/', 'mod', '^'].includes(value)) {
+                    // operators: replace visual symbols
+                    let op = value;
+                    if (value === '*') op = '*';
+                    if (value === '/') op = '/';
+                    if (value === 'mod') op = 'mod';
+                    if (value === '^') op = '^';
+                    appendToInput(op);
+                } else if (value === '.') {
+                    // avoid multiple decimals in current number (naive but ok)
+                    appendToInput('.');
+                } else {  // numbers 0-9
+                    appendToInput(value);
+                }
+
+                updateDisplay();
+            }
+
+            // helper to append string and handle leading zero
+            function appendToInput(str) {
+                if (currentInput === '0' && !isOperator(str) && str !== '.' && str !== ')' && !str.includes('(') && !str.includes('⁻¹')) {
+                    currentInput = str;
+                } else {
+                    currentInput += str;
+                }
+                // optional: limit length
+                if (currentInput.length > 50) currentInput = currentInput.slice(0, 50);
+            }
+
+            // attach event listeners
+            buttons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const val = btn.getAttribute('data-value');
+                    if (val) handleButton(val);
+                });
+            });
+
+            // keyboard support (bonus)
+            document.addEventListener('keydown', (e) => {
+                const key = e.key;
+                const allowedKeys = {
+                    '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+                    '.':'.','+':'+','-':'-','*':'*','/':'/', '(':'(', ')':')', '^':'^', '!':'!',
+                    'Enter':'=', '=':'=', 'Backspace':'⌫', 'Delete':'AC', 'Escape':'AC',
+                    '%':'mod', 'p':'π', 'e':'e'
+                };
+                if (key in allowedKeys) {
+                    e.preventDefault();
+                    let mapped = allowedKeys[key];
+                    if (key === '%') mapped = 'mod';
+                    if (key === 'p') mapped = 'π';
+                    if (key === 'Enter' || key === '=') mapped = '=';
+                    if (key === 'Backspace') mapped = '⌫';
+                    if (key === 'Delete' || key === 'Escape') mapped = 'AC';
+                    handleButton(mapped);
+                }
+                // optional: c for clear
+                if (key === 'c' || key === 'C') {
+                    e.preventDefault();
+                    handleButton('C');
+                }
+            });
+
+            // initial display
+            updateDisplay();
+        })();
+    </script>
+</body>
+</html>
